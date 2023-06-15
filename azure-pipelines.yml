@@ -46,3 +46,10 @@ steps:
     command: 'build'
     arguments: '--no-restore --configuration Release'
     projects: '**/*.csproj'
+
+- task: SnykSecurityScan@1
+  inputs:
+    serviceConnectionEndpoint: 'Snyk Connection'
+    testType: 'app'
+    monitorWhen: 'always'
+    failOnIssues: true
