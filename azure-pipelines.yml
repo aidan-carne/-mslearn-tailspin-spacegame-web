@@ -4,48 +4,45 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- master
- 
-pool:
- vmImage: windows-latest
- 
-steps:
-- task: VisualStudioTestPlatformInstaller@1
-  inputs:
-    packageFeedSelector: 'nugetOrg'
-    versionSelector: 'latestPreRelease'
- inputs:
-   packageFeedSelector: 'nugetOrg'
-   versionSelector: 'latestPreRelease'
- 
-- task: UseDotNet@2
- inputs:
-   packageType: 'sdk'
-   version: '6.x'
-   includePreviewVersions: true
- 
-- task: NuGetToolInstaller@1
- inputs:
-   versionSpec: '5.9.0'
-   checkLatest: true
- 
-- task: DotNetCoreCLI@2
- inputs:
-   command: 'restore'
-   projects: '**/*.sln'
-   feedsToUse: 'select'
- 
-- task: SonarCloudPrepare@1
- inputs:
-   SonarCloud: 'SonarCloud'
-   organization: 'mySonarCloudOrganization'
-   scannerMode: 'MSBuild'
-   projectKey: 'myRepo_myProject1'
- 
-- task: DotNetCoreCLI@2
- inputs:
-   command: 'build'
-   projects: 'myproject1/solution.sln'
-   arguments: '/nr:false' // this flag is important to avoid DLL lock for the 2nd build/analysis
- 
+- '*'
 
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Use .NET SDK 6.x'
+  inputs:
+    packageType: sdk
+    version: '6.x'
+
+- task: Npm@1
+  displayName: 'Run npm install'
+  inputs:
+    verbose: false
+
+- script: './node_modules/.bin/node-sass Tailspin.SpaceGame.Web/wwwroot --output Tailspin.SpaceGame.Web/wwwroot'
+  displayName: 'Compile Sass assets'
+
+- task: gulp@1
+  displayName: 'Run gulp tasks'
+
+- script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
+  displayName: 'Write build info'
+  workingDirectory: Tailspin.SpaceGame.Web/wwwroot
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore project dependencies'
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build the project - Release'
+  inputs:
+    command: 'build'
+    arguments: '--no-restore --configuration Release'
+    projects: '**/*.csproj'
