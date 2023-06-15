@@ -4,14 +4,45 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- main
-
+- master
+ 
 pool:
-  vmImage: ubuntu-latest
-
-variables:
-  buildConfiguration: 'Release'
-
+ vmImage: windows-latest
+ 
 steps:
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'dotnet build $(buildConfiguration)'
+- task: VisualStudioTestPlatformInstaller@1
+ inputs:
+   packageFeedSelector: 'nugetOrg'
+   versionSelector: 'latestPreRelease'
+ 
+- task: UseDotNet@2
+ inputs:
+   packageType: 'sdk'
+   version: '6.x'
+   includePreviewVersions: true
+ 
+- task: NuGetToolInstaller@1
+ inputs:
+   versionSpec: '5.9.0'
+   checkLatest: true
+ 
+- task: DotNetCoreCLI@2
+ inputs:
+   command: 'restore'
+   projects: '**/*.sln'
+   feedsToUse: 'select'
+ 
+- task: SonarCloudPrepare@1
+ inputs:
+   SonarCloud: 'SonarCloud'
+   organization: 'mySonarCloudOrganization'
+   scannerMode: 'MSBuild'
+   projectKey: 'myRepo_myProject1'
+ 
+- task: DotNetCoreCLI@2
+ inputs:
+   command: 'build'
+   projects: 'myproject1/solution.sln'
+   arguments: '/nr:false' // this flag is important to avoid DLL lock for the 2nd build/analysis
+ 
+
